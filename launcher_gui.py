@@ -65,8 +65,8 @@ def run_eye_dataset_organizer():
 
         if os.path.exists(script_path):
             result = messagebox.askyesno(
-                "Organizador de Dataset de Olhos",
-                "👁️ ORGANIZADOR DE DATASET DE OLHOS\n\n"
+                "Extrator de Dataset de Olhos",
+                "👁️ EXTRATOR DE DATASE DE OLHOS\n\n"
                 + "Esta ferramenta vai:\n"
                 + "✅ Extrair APENAS regiões de olhos do seu dataset\n"
                 + "✅ Organizar em alert/drowsy automaticamente\n"
@@ -110,14 +110,13 @@ def run_eye_trainer():
             result = messagebox.askyesno(
                 "Treinador de Dataset de Olhos",
                 "🤖 TREINADOR ESPECIALIZADO EM OLHOS\n\n"
-                + "Este treinador é MUITO mais preciso!\n"
                 + "✅ Usa APENAS imagens de olhos\n"
                 + "✅ Features avançadas para análise de olhos\n"
                 + "✅ Modelos otimizados (RandomForest + SVM)\n"
                 + "✅ Elimina falsos positivos de faces\n\n"
                 + "📊 Espere acurácia > 90%!\n\n"
                 + "Você tem um dataset de olhos preparado?\n"
-                + "(Use o Organizador se precisar extrair olhos)",
+                + "(Use o Extrator se precisar extrair olhos)",
             )
 
             if result:
@@ -150,15 +149,13 @@ def run_eye_detector():
 
         if os.path.exists(script_path):
             result = messagebox.askyesno(
-                "Detector Especializado em Olhos",
-                "👁️ DETECTOR ESPECIALIZADO EM OLHOS\n\n"
-                + "O detector mais preciso disponível!\n"
-                + "✅ Analisa APENAS regiões de olhos\n"
+                "Detector Especializado em Fadiga",
+                "👁️ DETECTOR ESPECIALIZADO EM FADIGA\n\n"
                 + "✅ Usa modelos treinados com dataset de olhos\n"
-                + "✅ Calibração personalizada automática\n"
-                + "✅ Elimina falsos positivos definitivamente\n\n"
+                + "✅ Detecta automaticamente variações de posição de cabeça\n"
+                + "✅ Calibração personalizada\n"
                 + "⚠️ REQUISITO: Modelos de olhos treinados\n"
-                + "(Use o Treinador de Olhos primeiro)\n\n"
+                + "(Treine o modelo de olhos primeiro)\n\n"
                 + "Continuar?",
             )
 
@@ -169,14 +166,12 @@ def run_eye_detector():
                 )
 
                 messagebox.showinfo(
-                    "Detector de Olhos Iniciado",
+                    "Detector de Fadiga Iniciado",
                     "👁️ Detector Especializado iniciado!\n\n"
                     + "📋 CONTROLES:\n"
                     + "• 'q' = Sair\n"
                     + "• 'c' = Calibrar threshold\n"
-                    + "• 's' = Ver estatísticas\n\n"
-                    + "🎯 Focando apenas nos olhos para\n"
-                    + "máxima precisão!",
+                    + "• 's' = Ver estatísticas\n\n",
                 )
         else:
             messagebox.showerror("Erro", "Arquivo do detector de olhos não encontrado!")
@@ -252,9 +247,9 @@ def check_models():
 
 
 def create_gui():
-    """Cria a interface gráfica principal - REFATORADA E LIMPA"""
+    """Cria a interface gráfica principal"""
     root = tk.Tk()
-    root.title("👁️ Sistema de Detecção de Fadiga por Olhos")
+    root.title("Sistema de Detecção de Fadiga")
     root.geometry("700x800")  # Aumentei a altura
     root.configure(bg="#2c3e50")
     root.resizable(True, True)
@@ -266,7 +261,7 @@ def create_gui():
 
     title_label = tk.Label(
         header_frame,
-        text="👁️ SISTEMA DE DETECÇÃO DE FADIGA\nEspecializado em Análise de Olhos",
+        text="SISTEMA DE DETECÇÃO DE FADIGA",
         font=("Arial", 14, "bold"),
         fg="white",
         bg="#34495e",
@@ -277,13 +272,8 @@ def create_gui():
     main_frame = tk.Frame(root, bg="#2c3e50")
     main_frame.pack(expand=True, fill="both", padx=40, pady=10)  # Reduzi pady
 
-    # Informações do sistema
-    info_text = """Sistema Especializado em Olhos • ML • Tempo Real
-👁️ Detector de Olhos •  Dataset Personalizado • 🤖 Modelos Treinados"""
-
     info_label = tk.Label(
         main_frame,
-        text=info_text,
         font=("Arial", 9),
         fg="#ecf0f1",
         bg="#2c3e50",
@@ -304,7 +294,7 @@ def create_gui():
     # === DETECTOR PRINCIPAL ===
     main_section = tk.Label(
         main_frame,
-        text="👁️ DETECTOR PRINCIPAL",
+        text="DETECTOR PRINCIPAL",
         font=("Arial", 12, "bold"),
         fg="#e67e22",
         bg="#2c3e50",
@@ -314,7 +304,7 @@ def create_gui():
     # Detector de Olhos
     eye_detector_btn = tk.Button(
         main_frame,
-        text="👁️ DETECTOR DE OLHOS",
+        text="👁️ DETECTOR DE FADIGA",
         bg="#e67e22",
         command=run_eye_detector,
         **btn_style,
@@ -324,7 +314,7 @@ def create_gui():
     # === PREPARAÇÃO DE DADOS ===
     data_section = tk.Label(
         main_frame,
-        text="📁 PREPARAÇÃO DE DADOS",
+        text="PREPARAÇÃO DE DADOS",
         font=("Arial", 12, "bold"),
         fg="#8e44ad",
         bg="#2c3e50",
@@ -334,7 +324,7 @@ def create_gui():
     # Organizador de Dataset
     organizer_btn = tk.Button(
         main_frame,
-        text="📁 ORGANIZAR DATASET DE OLHOS",
+        text="📁 EXTRATOR DE OLHOS PARA DATASET",
         bg="#8e44ad",
         command=run_eye_dataset_organizer,
         **btn_style,
@@ -354,7 +344,7 @@ def create_gui():
     # === STATUS DO SISTEMA ===
     status_section = tk.Label(
         main_frame,
-        text="📊 STATUS DO SISTEMA",
+        text="STATUS DO SISTEMA",
         font=("Arial", 12, "bold"),
         fg="#95a5a6",
         bg="#2c3e50",
@@ -374,21 +364,19 @@ def create_gui():
     # === INSTRUÇÕES ===
     instructions_section = tk.Label(
         main_frame,
-        text="📋 COMO USAR",
+        text="📋 FLUXO RECOMENDADO",
         font=("Arial", 11, "bold"),
         fg="#3498db",
         bg="#2c3e50",
     )
     instructions_section.pack(pady=(15, 8))  # Reduzi pady
 
-    instructions_text = """FLUXO RECOMENDADO:
-    
-1. Organize seu dataset usando "Organizar Dataset"
+    instructions_text = """
+1. Organize seu dataset de olhos usando "Organizar Dataset"
 2. Treine os modelos com "Treinar Modelos de Olhos"  
-3. Use "Detector de Olhos" para detecção em tempo real
+3. Use "Detector de Fadiga" para detecção em tempo real
 
-Para uso direto: Execute "Detector de Olhos"
-Para status: Use "Verificar Modelos" """
+Para status: Use "Verificar Status dos Modelos" """
 
     instructions_label = tk.Label(
         main_frame,
@@ -403,7 +391,7 @@ Para status: Use "Verificar Modelos" """
     # Footer
     footer_label = tk.Label(
         main_frame,
-        text="Sistema Especializado • OpenCV + Scikit-learn • Dataset Personalizado",
+        text="Detector de Fadiga • OpenCV + Scikit-learn • Dataset Personalizado",
         font=("Arial", 8),
         fg="#95a5a6",
         bg="#2c3e50",
