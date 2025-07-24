@@ -171,7 +171,12 @@ def run_eye_detector():
                     + "📋 CONTROLES:\n"
                     + "• 'q' = Sair\n"
                     + "• 'c' = Calibrar threshold\n"
-                    + "• 's' = Ver estatísticas\n\n",
+                    + "• 's' = Ver estatísticas\n"
+                    + "• 'r' = Resetar posição da cabeça\n\n"
+                    + "🚨 ALERTAS AUTOMÁTICOS:\n"
+                    + "• Olhos fechados por 3+ segundos\n"
+                    + "• Cabeça baixa por 5+ segundos\n"
+                    + "• Incluem alertas sonoros",
                 )
         else:
             messagebox.showerror("Erro", "Arquivo do detector de olhos não encontrado!")
@@ -374,7 +379,7 @@ def create_gui():
     instructions_text = """
 1. Organize seu dataset de olhos usando "Organizar Dataset"
 2. Treine os modelos com "Treinar Modelos de Olhos"  
-3. Use "Detector de Fadiga" para detecção em tempo real
+3. Use "Detector de Fadiga" para detecção avançada em tempo real
 
 Para status: Use "Verificar Status dos Modelos" """
 

@@ -8,7 +8,18 @@ import numpy as np
 import pickle
 import os
 import json
+import time
+import threading
+import sys
 from datetime import datetime
+
+# Tenta importar winsound para alertas sonoros no Windows
+try:
+    import winsound
+
+    AUDIO_DISPONIVEL = True
+except ImportError:
+    AUDIO_DISPONIVEL = False
 
 
 class EyeFatigueDetector:
@@ -37,6 +48,23 @@ class EyeFatigueDetector:
         # Estatísticas
         self.total_frames = 0
         self.deteccoes_sono = 0
+
+        # Sistema de alertas temporais
+        self.olhos_fechados_inicio = None
+        self.cabeca_baixa_inicio = None
+        self.tempo_alerta_olhos = 3.0  # 3 segundos para olhos fechados
+        self.tempo_alerta_cabeca = 5.0  # 5 segundos para cabeça baixa
+        self.ultimo_alerta_olhos = 0
+        self.ultimo_alerta_cabeca = 0
+        self.intervalo_alerta = 2.0  # Intervalo mínimo entre alertas (segundos)
+
+        # Referência de posição da cabeça (será calibrada automaticamente)
+        self.posicao_referencia_cabeca = None
+        self.historico_posicao_cabeca = []
+        self.max_historico_posicao = 10
+        self.threshold_cabeca_baixa = (
+            0.12  # Threshold para considerar cabeça baixa (porcentagem)
+        )
 
     def carregar_modelos_olhos(self):
         """Carrega modelos especializados em olhos"""
@@ -175,12 +203,122 @@ class EyeFatigueDetector:
             print(f"⚠️ Erro ao extrair features: {e}")
             return np.zeros(self.feature_size)
 
+    def analisar_posicao_cabeca(self, face, frame_height):
+        """
+        Analisa se a cabeça está baixa baseado na posição da face
+        """
+        x, y, w, h = face
+
+        # Calcula a posição relativa da face no frame (normalizada)
+        posicao_atual = y / frame_height
+
+        # Adiciona ao histórico de posições
+        self.historico_posicao_cabeca.append(posicao_atual)
+        if len(self.historico_posicao_cabeca) > self.max_historico_posicao:
+            self.historico_posicao_cabeca.pop(0)
+
+        # Estabelece posição de referência (primeiros 30 frames)
+        if (
+            self.posicao_referencia_cabeca is None
+            and len(self.historico_posicao_cabeca) >= 5
+        ):
+            self.posicao_referencia_cabeca = np.mean(self.historico_posicao_cabeca)
+            print(
+                f"📏 Posição de referência da cabeça estabelecida: {self.posicao_referencia_cabeca:.3f}"
+            )
+
+        # Analisa se a cabeça está baixa
+        if self.posicao_referencia_cabeca is not None:
+            posicao_media = np.mean(self.historico_posicao_cabeca)
+            diferenca = posicao_media - self.posicao_referencia_cabeca
+
+            # Se a face está significativamente mais baixa que a referência
+            cabeca_baixa = diferenca > self.threshold_cabeca_baixa
+
+            return cabeca_baixa, diferenca
+
+        return False, 0.0
+
+    def emitir_alerta_sonoro(self, tipo_alerta):
+        """
+        Emite alerta sonoro (inclui som do sistema no Windows)
+        """
+
+        def alerta():
+            if tipo_alerta == "olhos":
+                print(
+                    "\n🚨🔊 ALERTA SONORO: OLHOS FECHADOS HÁ MAIS DE 3 SEGUNDOS! 🔊🚨"
+                )
+                print("⚠️ ACORDE! VOCÊ PODE ESTAR COM SONO!")
+                # Toca som de alerta no Windows
+                if AUDIO_DISPONIVEL:
+                    try:
+                        # Som de exclamação do Windows
+                        winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                        time.sleep(0.2)
+                        winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                    except:
+                        pass
+            elif tipo_alerta == "cabeca":
+                print("\n🚨🔊 ALERTA SONORO: CABEÇA BAIXA HÁ MAIS DE 5 SEGUNDOS! 🔊🚨")
+                print("⚠️ LEVANTE A CABEÇA! POSSÍVEL SONOLÊNCIA!")
+                # Toca som de aviso no Windows
+                if AUDIO_DISPONIVEL:
+                    try:
+                        # Som de pergunta do Windows
+                        winsound.MessageBeep(winsound.MB_ICONQUESTION)
+                        time.sleep(0.2)
+                        winsound.MessageBeep(winsound.MB_ICONQUESTION)
+                    except:
+                        pass
+
+        # Executa o alerta em thread separada para não travar o processamento
+        threading.Thread(target=alerta, daemon=True).start()
+
+    def gerenciar_alertas_temporais(self, olhos_fechados, cabeca_baixa):
+        """
+        Gerencia os alertas baseados em tempo
+        """
+        tempo_atual = time.time()
+        alertas_ativos = []
+
+        # Gerencia alerta de olhos fechados
+        if olhos_fechados:
+            if self.olhos_fechados_inicio is None:
+                self.olhos_fechados_inicio = tempo_atual
+            elif (
+                tempo_atual - self.olhos_fechados_inicio >= self.tempo_alerta_olhos
+                and tempo_atual - self.ultimo_alerta_olhos >= self.intervalo_alerta
+            ):
+                self.emitir_alerta_sonoro("olhos")
+                self.ultimo_alerta_olhos = tempo_atual
+                alertas_ativos.append("OLHOS_FECHADOS")
+        else:
+            self.olhos_fechados_inicio = None
+
+        # Gerencia alerta de cabeça baixa
+        if cabeca_baixa:
+            if self.cabeca_baixa_inicio is None:
+                self.cabeca_baixa_inicio = tempo_atual
+            elif (
+                tempo_atual - self.cabeca_baixa_inicio >= self.tempo_alerta_cabeca
+                and tempo_atual - self.ultimo_alerta_cabeca >= self.intervalo_alerta
+            ):
+                self.emitir_alerta_sonoro("cabeca")
+                self.ultimo_alerta_cabeca = tempo_atual
+                alertas_ativos.append("CABECA_BAIXA")
+        else:
+            self.cabeca_baixa_inicio = None
+
+        return alertas_ativos
+
     def detectar_fadiga_frame(self, frame):
         """
-        Detecta fadiga focando APENAS nos olhos
+        Detecta fadiga focando APENAS nos olhos + análise de posição da cabeça
         """
         self.total_frames += 1
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frame_height, frame_width = frame.shape[:2]
 
         # Detecta faces
         faces = self.face_cascade.detectMultiScale(gray, 1.3, 5)
@@ -192,6 +330,11 @@ class EyeFatigueDetector:
         face = max(faces, key=lambda x: x[2] * x[3])
         x, y, w, h = face
 
+        # Analisa posição da cabeça
+        cabeca_baixa, diferenca_posicao = self.analisar_posicao_cabeca(
+            face, frame_height
+        )
+
         # ROI da face
         roi_gray = gray[y : y + h, x : x + w]
         roi_color = frame[y : y + h, x : x + w]
@@ -200,6 +343,7 @@ class EyeFatigueDetector:
         eyes = self.eye_cascade.detectMultiScale(roi_gray, 1.1, 5)
 
         probabilidades_sono = []
+        olhos_detectados = len(eyes) > 0
 
         if len(eyes) > 0:
             # Analisa cada olho detectado
@@ -247,11 +391,35 @@ class EyeFatigueDetector:
         # Probabilidade suavizada
         sono_suavizado = np.mean(self.historico_olhos)
 
-        # Determina estado
-        if sono_suavizado > self.threshold_sono:
-            estado = "🚨 SONO DETECTADO"
+        # Determina se olhos estão fechados (combinação de detecção baixa e alta probabilidade de sono)
+        olhos_fechados = (not olhos_detectados) or (
+            sono_suavizado > self.threshold_sono
+        )
+
+        # Gerencia alertas temporais
+        alertas_ativos = self.gerenciar_alertas_temporais(olhos_fechados, cabeca_baixa)
+
+        # Determina estado geral
+        if alertas_ativos:
+            if "OLHOS_FECHADOS" in alertas_ativos:
+                estado = "🚨 ALERTA: OLHOS FECHADOS!"
+                cor_estado = (0, 0, 255)
+            elif "CABECA_BAIXA" in alertas_ativos:
+                estado = "🚨 ALERTA: CABEÇA BAIXA!"
+                cor_estado = (0, 0, 255)
+            else:
+                estado = "🚨 SONO DETECTADO"
+                cor_estado = (0, 0, 255)
             self.deteccoes_sono += 1
-            cor_estado = (0, 0, 255)
+        elif olhos_fechados:
+            estado = "⚠️ OLHOS FECHADOS"
+            cor_estado = (0, 165, 255)  # Laranja
+        elif cabeca_baixa:
+            estado = "⚠️ CABEÇA BAIXA"
+            cor_estado = (0, 165, 255)  # Laranja
+        elif sono_suavizado > self.threshold_sono:
+            estado = "😴 SONOLÊNCIA"
+            cor_estado = (0, 255, 255)  # Amarelo
         else:
             estado = "✅ ALERTA"
             cor_estado = (0, 255, 0)
@@ -259,22 +427,52 @@ class EyeFatigueDetector:
         # Calcula fadiga (0-100%)
         fadiga_pct = min(100, sono_suavizado * 100)
 
-        # Desenha informações
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+        # Desenha retângulo da face com cor baseada no estado
+        cor_face = cor_estado if cabeca_baixa else (255, 0, 0)
+        cv2.rectangle(frame, (x, y), (x + w, y + h), cor_face, 2)
 
         # Informações na tela
+        tempo_atual = time.time()
         info_lines = [
             f"Olhos: {len(eyes)} detectados",
             f"Sono: {sono_suavizado:.1%}",
             f"Fadiga: {fadiga_pct:.0f}%",
             f"Estado: {estado}",
-            f"Threshold: {self.threshold_sono:.2f}",
-            f"Deteccoes: {self.deteccoes_sono}/{self.total_frames}",
+            f"Posicao cabeca: {diferenca_posicao:+.3f}",
         ]
+
+        # Adiciona timers ativos
+        if self.olhos_fechados_inicio:
+            tempo_olhos = tempo_atual - self.olhos_fechados_inicio
+            info_lines.append(f"Olhos fechados: {tempo_olhos:.1f}s")
+            # Destaca timer em vermelho quando próximo do limite
+            if tempo_olhos > 2.0:
+                cor_timer_olhos = (0, 0, 255)
+
+        if self.cabeca_baixa_inicio:
+            tempo_cabeca = tempo_atual - self.cabeca_baixa_inicio
+            info_lines.append(f"Cabeca baixa: {tempo_cabeca:.1f}s")
+
+        info_lines.extend(
+            [
+                f"Threshold: {self.threshold_sono:.2f}",
+                f"Deteccoes: {self.deteccoes_sono}/{self.total_frames}",
+            ]
+        )
 
         y_offset = 30
         for i, line in enumerate(info_lines):
             cor = cor_estado if "Estado:" in line else (255, 255, 255)
+            # Destaca timers específicos quando próximos do limite
+            if "fechados:" in line and self.olhos_fechados_inicio:
+                tempo_olhos = tempo_atual - self.olhos_fechados_inicio
+                if tempo_olhos > 2.0:
+                    cor = (0, 0, 255)
+            elif "baixa:" in line and self.cabeca_baixa_inicio:
+                tempo_cabeca = tempo_atual - self.cabeca_baixa_inicio
+                if tempo_cabeca > 3.0:
+                    cor = (0, 0, 255)
+
             cv2.putText(
                 frame,
                 line,
@@ -288,11 +486,16 @@ class EyeFatigueDetector:
         return frame, fadiga_pct / 100, estado
 
     def executar(self):
-        """Executa o detector especializado em olhos"""
+        """Executa o detector especializado em olhos com detecção de cabeça baixa"""
         print("\n👁️ DETECTOR DE FADIGA INICIADO")
         print("📹 Pressione 'q' para sair")
         print("📹 Pressione 'c' para recalibrar threshold")
-        print("📹 Pressione 's' para estatísticas\n")
+        print("📹 Pressione 's' para estatísticas")
+        print("📹 Pressione 'r' para resetar posição de referência da cabeça")
+        print("\n🚨 RECURSOS DE ALERTA:")
+        print("• Alerta após 3 segundos com olhos fechados")
+        print("• Alerta após 5 segundos com cabeça baixa")
+        print("• Posição da cabeça é calibrada automaticamente\n")
 
         cap = cv2.VideoCapture(0)
 
@@ -324,6 +527,8 @@ class EyeFatigueDetector:
                     self.calibrar_threshold()
                 elif key == ord("s"):
                     self.mostrar_estatisticas(inicio)
+                elif key == ord("r"):
+                    self.resetar_referencia_cabeca()
 
         except KeyboardInterrupt:
             print("\n⏹️ Detector interrompido")
@@ -371,6 +576,14 @@ class EyeFatigueDetector:
         except ValueError:
             print("❌ Valor inválido")
 
+    def resetar_referencia_cabeca(self):
+        """Reseta a posição de referência da cabeça"""
+        self.posicao_referencia_cabeca = None
+        self.historico_posicao_cabeca = []
+        self.cabeca_baixa_inicio = None
+        print("\n🔄 Posição de referência da cabeça resetada!")
+        print("📏 Mantenha a cabeça em posição normal para nova calibração...")
+
     def mostrar_estatisticas(self, inicio):
         """Mostra estatísticas em tempo real"""
         duracao = datetime.now() - inicio
@@ -380,6 +593,11 @@ class EyeFatigueDetector:
         print(f"📹 Frames: {self.total_frames}")
         print(f"🚨 Detecções: {self.deteccoes_sono}")
         print(f"🎯 Threshold: {self.threshold_sono:.2f}")
+        print(
+            f"📏 Referência cabeça: {self.posicao_referencia_cabeca:.3f if self.posicao_referencia_cabeca else 'Não definida'}"
+        )
+        print(f"⏰ Tempo alerta olhos: {self.tempo_alerta_olhos}s")
+        print(f"⏰ Tempo alerta cabeça: {self.tempo_alerta_cabeca}s")
         if self.total_frames > 0:
             print(f"📈 Taxa sono: {self.deteccoes_sono/self.total_frames*100:.1f}%")
         print()

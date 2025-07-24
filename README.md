@@ -1,13 +1,30 @@
 # 👁️ Sistema de Detecção de Fadiga por Olhos
 
-Sistema especializado em detecção de fadiga através da análise de regiões oculares usando Machine Learning.
+Sistema especializado em detecção de fadiga através da análise de regiões oculares usando Machine Learning com detecção avançada de sonolência.
 
 ## 🚀 Características
 
 - **Detecção Especializada**: Foca apenas nas regiões dos olhos para máxima precisão
+- **Detecção de Cabeça Baixa**: Monitora posição da cabeça para detectar sonolência
+- **Alertas Temporais**: Alertas automáticos após 3s (olhos fechados) e 5s (cabeça baixa)
+- **Alertas Sonoros**: Sistema de alerta sonoro integrado
 - **Interface Gráfica**: GUI intuitiva para todas as funcionalidades
-- **Dataset Personalizado**: Organize e treine com seus próprios dados
+- **Dataset Personalizado**: Organize e treine with seus próprios dados
 - **Modelos Otimizados**: RandomForest e SVM especializados em olhos
+- **Calibração Automática**: Sistema se adapta automaticamente à posição da cabeça
+
+## 🚨 Novos Recursos de Alerta
+
+### Detecção de Olhos Fechados
+- **Tempo**: Alerta após 3 segundos com olhos fechados
+- **Método**: Combinação de detecção de olhos + análise de probabilidade
+- **Resposta**: Alerta visual, sonoro e no terminal
+
+### Detecção de Cabeça Baixa  
+- **Tempo**: Alerta após 5 segundos com cabeça baixa
+- **Método**: Análise da posição relativa da face no frame
+- **Calibração**: Automática baseada nos primeiros frames
+- **Resposta**: Alerta visual, sonoro e no terminal
 
 ## 📋 Pré-requisitos
 
@@ -91,6 +108,26 @@ Use "🔍 VERIFICAR STATUS DOS MODELOS" na interface para verificar:
 - Dataset disponível
 - Configurações
 
+## 🎮 Controles Durante a Detecção
+
+Durante a execução do detector, use as seguintes teclas:
+
+- **`q`** - Sair do detector
+- **`c`** - Calibrar threshold de detecção de sono
+- **`s`** - Mostrar estatísticas em tempo real
+- **`r`** - Resetar posição de referência da cabeça
+
+## ⚙️ Configurações de Alerta
+
+### Tempos de Alerta (podem ser ajustados no código)
+- **Olhos fechados**: 3.0 segundos
+- **Cabeça baixa**: 5.0 segundos
+- **Intervalo entre alertas**: 2.0 segundos
+
+### Threshold de Posição da Cabeça
+- **Padrão**: 0.15 (15% de variação na posição)
+- **Calibração**: Automática nos primeiros frames
+
 ## 🔧 Solução de Problemas
 
 ### Erro de Dependências
@@ -101,6 +138,14 @@ pip install -r requirements.txt
 ### Erro de Webcam
 - Verifique se a webcam está conectada
 - Feche outros aplicativos que usam a webcam
+
+### Alertas Sonoros não Funcionam
+- Os alertas sonoros usam a biblioteca `winsound` (Windows)
+- Em outros sistemas, apenas alertas visuais e no terminal
+
+### Posição de Referência da Cabeça
+- Mantenha a cabeça em posição normal nos primeiros segundos
+- Use `r` para resetar se a calibração ficou incorreta
 
 ### Baixa Precisão
 1. Use "🤖 TREINAR MODELOS" com dataset personalizado
