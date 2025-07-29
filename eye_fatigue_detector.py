@@ -1,6 +1,6 @@
 """
-Detector de Fadiga Especializado em Olhos
-Usa modelos treinados APENAS com imagens de olhos
+Detector de Fadiga de Olhos
+Usa modelos treinados com imagens de olhos
 """
 
 import cv2
@@ -24,14 +24,13 @@ except ImportError:
 
 class EyeFatigueDetector:
     """
-    Detector especializado que usa APENAS análise de olhos
-    Ignora boca e outras features, foca 100% nos olhos
+    Detector que analisa olhos
     """
 
     def __init__(self):
-        print("👁️ Iniciando Detector Especializado em Fadiga")
+        print("Iniciando Detector de Fadiga")
 
-        # Carrega modelos especializados
+        # Carrega modelos
         self.carregar_modelos_olhos()
 
         # Carrega calibração personalizada
@@ -67,7 +66,7 @@ class EyeFatigueDetector:
         )
 
     def carregar_modelos_olhos(self):
-        """Carrega modelos especializados em olhos"""
+        """Carrega modelos de machine learning"""
         try:
             with open("models/eye_fatigue_models.pkl", "rb") as f:
                 models = pickle.load(f)
@@ -78,20 +77,20 @@ class EyeFatigueDetector:
             self.image_size = models["image_size"]
             self.melhor_modelo = models["melhor_modelo"]
 
-            print("✅ Modelos de olhos carregados com sucesso!")
-            print(f"🤖 Modelo ativo: {self.melhor_modelo}")
-            print(f"📏 Features: {self.feature_size}")
+            print("Modelos carregados com sucesso!")
+            print(f"Modelo ativo: {self.melhor_modelo}")
+            print(f"Features: {self.feature_size}")
 
         except FileNotFoundError:
-            print("❌ Modelos de olhos não encontrados!")
-            print("🔧 Execute o eye_dataset_trainer.py primeiro!")
+            print("Modelos não encontrados!")
+            print("Execute o treinamento primeiro!")
             exit(1)
         except Exception as e:
-            print(f"❌ Erro ao carregar modelos: {e}")
+            print(f"Erro ao carregar modelos: {e}")
             exit(1)
 
     def carregar_calibracao(self):
-        """Carrega calibração personalizada ou usa padrões conservadores"""
+        """Carrega calibração personalizada"""
         arquivos_calibracao = [
             "eye_calibration.json",
             "super_calibracao.json",
@@ -107,22 +106,20 @@ class EyeFatigueDetector:
                         config = json.load(f)
 
                     self.threshold_sono = config.get("threshold_sono", 0.75)
-                    print(f"✅ Calibração carregada: {arquivo}")
-                    print(f"🎯 Threshold: {self.threshold_sono:.2f}")
+                    print(f"Calibração carregada: {arquivo}")
+                    print(f"Threshold: {self.threshold_sono:.2f}")
                     calibracao_carregada = True
                     break
                 except:
                     continue
 
         if not calibracao_carregada:
-            # Threshold conservador para olhos
             self.threshold_sono = 0.75
-            print("⚠️ Usando threshold padrão: 0.75")
+            print("Usando threshold padrão: 0.75")
 
     def extrair_features_olho_avancadas(self, roi_olho):
         """
-        Extrai features avançadas de uma região de olho
-        Mesma função usada no treinamento
+        Extrai características de uma região de olho
         """
         if roi_olho.size == 0:
             return np.zeros(self.feature_size)
@@ -200,7 +197,7 @@ class EyeFatigueDetector:
             return np.array(features[: self.feature_size])
 
         except Exception as e:
-            print(f"⚠️ Erro ao extrair features: {e}")
+            print(f"Erro ao extrair features: {e}")
             return np.zeros(self.feature_size)
 
     def analisar_posicao_cabeca(self, face, frame_height):
@@ -217,14 +214,14 @@ class EyeFatigueDetector:
         if len(self.historico_posicao_cabeca) > self.max_historico_posicao:
             self.historico_posicao_cabeca.pop(0)
 
-        # Estabelece posição de referência (primeiros 30 frames)
+        # Estabelece posição de referência
         if (
             self.posicao_referencia_cabeca is None
             and len(self.historico_posicao_cabeca) >= 5
         ):
             self.posicao_referencia_cabeca = np.mean(self.historico_posicao_cabeca)
             print(
-                f"📏 Posição de referência da cabeça estabelecida: {self.posicao_referencia_cabeca:.3f}"
+                f"Posição de referência da cabeça estabelecida: {self.posicao_referencia_cabeca:.3f}"
             )
 
         # Analisa se a cabeça está baixa
@@ -246,10 +243,8 @@ class EyeFatigueDetector:
 
         def alerta():
             if tipo_alerta == "olhos":
-                print(
-                    "\n🚨🔊 ALERTA SONORO: OLHOS FECHADOS HÁ MAIS DE 3 SEGUNDOS! 🔊🚨"
-                )
-                print("⚠️ ACORDE! VOCÊ PODE ESTAR COM SONO!")
+                print("\nALERTA SONORO: OLHOS FECHADOS HÁ MAIS DE 3 SEGUNDOS!")
+                print("ACORDE! VOCÊ PODE ESTAR COM SONO!")
                 # Toca som de alerta no Windows
                 if AUDIO_DISPONIVEL:
                     try:
@@ -260,8 +255,8 @@ class EyeFatigueDetector:
                     except:
                         pass
             elif tipo_alerta == "cabeca":
-                print("\n🚨🔊 ALERTA SONORO: CABEÇA BAIXA HÁ MAIS DE 5 SEGUNDOS! 🔊🚨")
-                print("⚠️ LEVANTE A CABEÇA! POSSÍVEL SONOLÊNCIA!")
+                print("\nALERTA SONORO: CABEÇA BAIXA HÁ MAIS DE 5 SEGUNDOS!")
+                print("LEVANTE A CABEÇA! POSSÍVEL SONOLÊNCIA!")
                 # Toca som de aviso no Windows
                 if AUDIO_DISPONIVEL:
                     try:
@@ -314,7 +309,7 @@ class EyeFatigueDetector:
 
     def detectar_fadiga_frame(self, frame):
         """
-        Detecta fadiga focando APENAS nos olhos + análise de posição da cabeça
+        Detecta fadiga analisando olhos + posição da cabeça
         """
         self.total_frames += 1
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -402,26 +397,26 @@ class EyeFatigueDetector:
         # Determina estado geral
         if alertas_ativos:
             if "OLHOS_FECHADOS" in alertas_ativos:
-                estado = "🚨 ALERTA: OLHOS FECHADOS!"
+                estado = "ALERTA: OLHOS FECHADOS!"
                 cor_estado = (0, 0, 255)
             elif "CABECA_BAIXA" in alertas_ativos:
-                estado = "🚨 ALERTA: CABEÇA BAIXA!"
+                estado = "ALERTA: CABEÇA BAIXA!"
                 cor_estado = (0, 0, 255)
             else:
-                estado = "🚨 SONO DETECTADO"
+                estado = "SONO DETECTADO"
                 cor_estado = (0, 0, 255)
             self.deteccoes_sono += 1
         elif olhos_fechados:
-            estado = "⚠️ OLHOS FECHADOS"
+            estado = "OLHOS FECHADOS"
             cor_estado = (0, 165, 255)  # Laranja
         elif cabeca_baixa:
-            estado = "⚠️ CABEÇA BAIXA"
+            estado = "CABEÇA BAIXA"
             cor_estado = (0, 165, 255)  # Laranja
         elif sono_suavizado > self.threshold_sono:
             estado = "😴 SONOLÊNCIA"
             cor_estado = (0, 255, 255)  # Amarelo
         else:
-            estado = "✅ ALERTA"
+            estado = "ALERTA"
             cor_estado = (0, 255, 0)
 
         # Calcula fadiga (0-100%)
@@ -486,13 +481,13 @@ class EyeFatigueDetector:
         return frame, fadiga_pct / 100, estado
 
     def executar(self):
-        """Executa o detector especializado em olhos com detecção de cabeça baixa"""
-        print("\n👁️ DETECTOR DE FADIGA INICIADO")
+        """Executa o detector de olhos com detecção de cabeça baixa"""
+        print("\nDETECTOR DE FADIGA INICIADO")
         print("📹 Pressione 'q' para sair")
         print("📹 Pressione 'c' para recalibrar threshold")
         print("📹 Pressione 's' para estatísticas")
         print("📹 Pressione 'r' para resetar posição de referência da cabeça")
-        print("\n🚨 RECURSOS DE ALERTA:")
+        print("\nRECURSOS DE ALERTA:")
         print("• Alerta após 3 segundos com olhos fechados")
         print("• Alerta após 5 segundos com cabeça baixa")
         print("• Posição da cabeça é calibrada automaticamente\n")
@@ -515,9 +510,9 @@ class EyeFatigueDetector:
 
                 # Alertas no terminal
                 if fadiga > 0.7:
-                    print(f"🚨 ALERTA: {estado} - Fadiga: {fadiga:.1%}")
+                    print(f"ALERTA: {estado} - Fadiga: {fadiga:.1%}")
 
-                cv2.imshow("Detector Especializado em Fadiga", frame_processado)
+                cv2.imshow("Detector de Fadiga", frame_processado)
 
                 key = cv2.waitKey(1) & 0xFF
 
@@ -531,7 +526,7 @@ class EyeFatigueDetector:
                     self.resetar_referencia_cabeca()
 
         except KeyboardInterrupt:
-            print("\n⏹️ Detector interrompido")
+            print("\nDetector interrompido")
         finally:
             cap.release()
             cv2.destroyAllWindows()
@@ -539,9 +534,9 @@ class EyeFatigueDetector:
             # Estatísticas finais
             duracao = datetime.now() - inicio
             print(f"\n📊 ESTATÍSTICAS FINAIS:")
-            print(f"⏱️ Duração: {duracao}")
+            print(f"Duração: {duracao}")
             print(f"📹 Frames processados: {self.total_frames}")
-            print(f"🚨 Detecções de sono: {self.deteccoes_sono}")
+            print(f"Detecções de sono: {self.deteccoes_sono}")
             if self.total_frames > 0:
                 print(
                     f"📈 Taxa de sono: {self.deteccoes_sono/self.total_frames*100:.1f}%"
@@ -549,7 +544,7 @@ class EyeFatigueDetector:
 
     def calibrar_threshold(self):
         """Calibra threshold interativamente"""
-        print("\n🎯 CALIBRAÇÃO INTERATIVA")
+        print("\nCALIBRAÇÃO INTERATIVA")
         print("Digite novo threshold (0.0 - 1.0) ou Enter para manter atual:")
 
         try:
@@ -558,7 +553,7 @@ class EyeFatigueDetector:
                 novo_threshold = float(entrada)
                 if 0.0 <= novo_threshold <= 1.0:
                     self.threshold_sono = novo_threshold
-                    print(f"✅ Threshold atualizado: {self.threshold_sono:.2f}")
+                    print(f"Threshold atualizado: {self.threshold_sono:.2f}")
 
                     # Salva nova calibração
                     config = {
@@ -589,10 +584,10 @@ class EyeFatigueDetector:
         duracao = datetime.now() - inicio
 
         print(f"\n📊 ESTATÍSTICAS ATUAIS:")
-        print(f"⏱️ Tempo rodando: {duracao}")
+        print(f"Tempo rodando: {duracao}")
         print(f"📹 Frames: {self.total_frames}")
-        print(f"🚨 Detecções: {self.deteccoes_sono}")
-        print(f"🎯 Threshold: {self.threshold_sono:.2f}")
+        print(f"Detecções: {self.deteccoes_sono}")
+        print(f"Threshold: {self.threshold_sono:.2f}")
         print(
             f"📏 Referência cabeça: {self.posicao_referencia_cabeca:.3f if self.posicao_referencia_cabeca else 'Não definida'}"
         )
